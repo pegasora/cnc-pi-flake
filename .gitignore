@@ -1,0 +1,51 @@
+# Nix build results
+result
+result-*
+
+# Downloaded/built images (can be re-downloaded/built)
+*.img
+*.img.zst
+*.iso
+installer.img
+installer/
+
+# Nix development
+.direnv/
+.envrc
+
+# Temporary build directories
+.nixos-anywhere/
+tmp/
+temp/
+
+# SSH keys and secrets (if any)
+*.pem
+*.key
+id_rsa*
+id_ed25519*
+secrets/
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Hardware configuration (auto-generated during installation)
+# Uncomment if you want to ignore auto-generated hardware configs
+# hosts/*/hardware-configuration.nix
+
+# Agent context (local only, not for version control)
+AGENTS.md
+
+# Backup files
+*.bak
+*.backup
+*~
