@@ -45,6 +45,9 @@ secrets/
 # Agent context (local only, not for version control)
 AGENTS.md
 
+# Old documentation (archived, not actively maintained)
+old-material/
+
 # Backup files
 *.bak
 *.backup
