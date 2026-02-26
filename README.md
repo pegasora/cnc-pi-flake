@@ -1,290 +1,319 @@
 # CNC Pi - NixOS Configuration for Raspberry Pi 4 B
 
-This repository contains a modular NixOS configuration for a Raspberry Pi 4 Model B, designed for CNC machine control with zero trust network connectivity.
+✅ **Status: Deployed and Working** (Feb 25, 2026)
 
-## Repository Structure
+This repository contains a modular NixOS configuration for a Raspberry Pi 4 Model B, designed for CNC machine control. The Pi is currently running NixOS and accessible via SSH.
+
+## Quick Info
+
+- **Hostname**: `cnc-pi` (accessible at `cnc-pi.local`)
+- **System**: NixOS 25.11 on Raspberry Pi 4
+- **Network**: Ethernet-only (WiFi/Bluetooth disabled)
+- **User**: `vandal`
+- **Deployment Method**: nvmd pre-built installer (no building required!)
+
+## 🚀 Getting Started
+
+**First time deploying?** → Read **[FINAL-DEPLOYMENT.md](FINAL-DEPLOYMENT.md)** for complete step-by-step instructions.
+
+**Quick overview:**
+```bash
+# 1. Download pre-built installer (no building!)
+just download-installer
+
+# 2. Flash to SD card
+just flash-sd ./result/sd-image/*.img.zst /dev/sda
+
+# 3. Boot Pi, get password from screen
+
+# 4. Deploy your config
+just deploy-to-installer cnc-pi root@<pi-ip>
+
+# 5. SSH in after reboot
+ssh vandal@cnc-pi.local
+```
+
+That's it! See [FINAL-DEPLOYMENT.md](FINAL-DEPLOYMENT.md) for detailed instructions with troubleshooting.
+
+---
+
+## 📁 Repository Structure
 
 ```
 .
 ├── flake.nix                    # Main flake configuration
 ├── hosts/
 │   └── cnc-pi/                  # Host-specific configuration
-│       ├── configuration.nix    # Main system configuration
-│       └── hardware-configuration.nix  # Hardware-specific settings
+│       ├── configuration.nix    # Main system config (EDIT THIS)
+│       └── hardware-configuration.nix
 ├── modules/
 │   ├── nixos/                   # NixOS system modules
-│   │   ├── default.nix
-│   │   ├── packages.nix         # System packages
+│   │   ├── packages.nix         # System packages (add CNC tools here)
 │   │   └── services.nix         # System services
 │   └── hardware/                # Hardware-specific modules
-│       └── default.nix
-└── disks/                       # Disk partitioning configurations (optional)
+├── justfile                     # Task automation commands
+└── FINAL-DEPLOYMENT.md          # Complete deployment guide
 ```
 
-## Features
+**Main files to edit:**
+- `hosts/cnc-pi/configuration.nix` - System settings, networking, users
+- `modules/nixos/packages.nix` - Add CNC software packages here
+- `modules/nixos/services.nix` - Configure system services
 
-- **Modular Configuration**: Organized similar to your main NixOS system
-- **Raspberry Pi 4 Support**: Uses `nixos-raspberrypi` flake for hardware support
-- **Zero Trust Network**: Configured for ethernet-only with firewall enabled
-- **SSH Access**: Remote management via SSH
-- **Minimal Attack Surface**: WiFi and Bluetooth disabled by default
+---
 
-## Prerequisites
+## ✨ Features
 
-1. Raspberry Pi 4 Model B
-2. MicroSD card (16GB+ recommended) or USB drive
-3. Ethernet connection to your zero trust network
-4. Another machine with Nix/NixOS for building and deployment
-5. (Optional) [just](https://github.com/casey/just) command runner for convenience
+- **No Building Required**: Uses pre-built nvmd installer images
+- **Fully Declarative**: Everything configured in Nix
+- **Modular Configuration**: Organized like a typical NixOS flake
+- **Raspberry Pi 4 Support**: Uses official `nixos-raspberrypi` flake (nvmd)
+- **Ethernet Networking**: DHCP-enabled, accessible via `cnc-pi.local`
+- **SSH Access**: Remote management from your laptop
+- **Serial Port Access**: User in `dialout` group for CNC communication
+- **Minimal Attack Surface**: WiFi/Bluetooth disabled (can enable later)
+- **Task Automation**: Many `just` commands for common operations
 
-## Quick Start with Just
+---
 
-If you have [just](https://github.com/casey/just) installed, you can use convenient commands:
+## 🛠️ Common Tasks
 
+### Deploy Configuration Changes
+
+**From your laptop:**
 ```bash
-# See all available commands
-just list
+# Edit configuration
+vim hosts/cnc-pi/configuration.nix
 
-# Initialize (update flake lock)
-just init
-
-# Check configuration for errors
+# Check for errors
 just check
 
-# Build the installer image
-just build-installer
-
-# Deploy using nixos-anywhere
-just deploy-anywhere cnc-pi root@<pi-ip>
-
-# Or deploy to existing NixOS installation
-just deploy cnc-pi cnc@cnc-pi.local
-
-# SSH into the Pi
-just ssh
-
-# And many more... see: just list
+# Deploy to Pi
+just deploy cnc-pi vandal@cnc-pi.local
 ```
 
-See the [Using Just Commands](#using-just-commands) section below for details.
-
-## Initial Setup
-
-### Option 1: Using nixos-anywhere (Recommended)
-
-This method will automatically partition, format, and install NixOS on your Raspberry Pi.
-
-1. **Boot the Pi with the installer image**:
-   
-   Build the installer SD card image:
-   ```bash
-   nix build github:nvmd/nixos-raspberrypi#installerImages.rpi4
-   ```
-   
-   Flash it to an SD card:
-   ```bash
-   sudo dd if=./result/sd-image/*.img of=/dev/sdX bs=4M status=progress conv=fsync
-   ```
-
-2. **Boot the Raspberry Pi** from the SD card and connect via ethernet
-
-3. **Find the Pi's IP address** (it will show on screen, or use `nmap` to scan your network)
-
-4. **Deploy from your development machine**:
-   ```bash
-   cd ~/Projects/flakes/cnc-pi-flake
-   
-   # Initialize git and flake (if not done already)
-   git init
-   git add .
-   
-   # Deploy to the Pi
-   nix run github:nix-community/nixos-anywhere -- \
-     --flake .#cnc-pi \
-     --target-host root@<pi-ip-address>
-   ```
-
-### Option 2: Manual Installation
-
-1. **Build the SD card image**:
-   ```bash
-   cd ~/Projects/flakes/cnc-pi-flake
-   nix build .#nixosConfigurations.cnc-pi.config.system.build.sdImage
-   ```
-
-2. **Flash the image**:
-   ```bash
-   sudo dd if=./result/sd-image/*.img of=/dev/sdX bs=4M status=progress conv=fsync
-   ```
-
-3. **Boot the Pi** and SSH in to complete setup
-
-### Option 3: Remote Deployment to Existing System
-
-If you already have NixOS running on the Pi:
-
+**On the Pi itself:**
 ```bash
-cd ~/Projects/flakes/cnc-pi-flake
+# SSH into Pi
+ssh vandal@cnc-pi.local
 
-# Deploy configuration changes
-nixos-rebuild switch --flake .#cnc-pi --target-host cnc@cnc-pi.local
-```
+# Clone flake (first time only)
+cd ~
+git clone <repo-url> cnc-pi-flake
 
-## Post-Installation Setup
-
-1. **Change the default password**:
-   ```bash
-   ssh cnc@cnc-pi.local
-   passwd
-   ```
-
-2. **Set up SSH key authentication**:
-   ```bash
-   # On your development machine
-   ssh-copy-id cnc@cnc-pi.local
-   ```
-
-3. **Disable password authentication** (edit `hosts/cnc-pi/configuration.nix`):
-   ```nix
-   services.openssh.settings.PasswordAuthentication = false;
-   ```
-   Then rebuild:
-   ```bash
-   nixos-rebuild switch --flake .#cnc-pi --target-host cnc@cnc-pi.local
-   ```
-
-4. **Approve on zero trust network**: Use your network's approval process to allow the Pi
-
-## Network Configuration
-
-The Pi is configured for ethernet-only connectivity:
-- DHCP enabled on eth0
-- WiFi disabled
-- Bluetooth disabled
-- Firewall enabled (SSH only)
-- mDNS enabled (accessible at `cnc-pi.local`)
-
-## Updating the System
-
-### Update flake inputs:
-```bash
-nix flake update
-```
-
-### Rebuild and deploy:
-```bash
-nixos-rebuild switch --flake .#cnc-pi --target-host cnc@cnc-pi.local
-```
-
-### Or on the Pi itself:
-```bash
-cd /path/to/cnc-pi-flake
+# Rebuild system
+cd ~/cnc-pi-flake
 sudo nixos-rebuild switch --flake .#cnc-pi
 ```
 
-## Using Just Commands
+### Update System Packages
 
-This repository includes a `justfile` for convenient command execution. Here are the main commands:
-
-### Setup and Validation
 ```bash
-just init              # Update flake lock file
-just check             # Validate configuration
-just info              # Show flake info
-just metadata          # Show flake metadata
+# Update flake inputs (get newer package versions)
+just init
+
+# Deploy updated system
+just deploy cnc-pi vandal@cnc-pi.local
 ```
 
-### Building
-```bash
-just build             # Build the configuration
-just build-image       # Build SD card image
-just build-installer   # Build official installer image
+### Add CNC Software
+
+Edit `modules/nixos/packages.nix`:
+
+```nix
+environment.systemPackages = with pkgs; [
+  # Existing packages...
+  
+  # Add your CNC tools:
+  # linuxcnc
+  # openscad
+  # freecad
+  # grbl
+];
 ```
 
-### Deployment
-```bash
-just deploy cnc-pi cnc@cnc-pi.local           # Deploy to existing system
-just deploy-anywhere cnc-pi root@192.168.1.100 # Fresh install with nixos-anywhere
-just flash-sd ./result/sd-image/*.img /dev/sdX # Flash image to SD card
-```
+Then deploy: `just deploy cnc-pi vandal@cnc-pi.local`
 
-### Remote Management
-```bash
-just ssh                    # SSH into the Pi
-just ssh-copy-id            # Copy SSH key to Pi
-just status                 # Check system status
-just sysinfo                # Show system info
-just logs                   # Tail system logs
-```
+### View All Available Commands
 
-### Network Utilities
-```bash
-just scan-network           # Scan for Raspberry Pi on network
-just ping-pi                # Ping the Pi via mDNS
-```
-
-### On the Pi Itself
-```bash
-just rebuild               # Rebuild current configuration
-just update-rebuild        # Update and rebuild
-just clean                 # Clean old generations and garbage collect
-```
-
-For a full list of commands, run:
 ```bash
 just list
 ```
 
-## Customization
+---
 
-### Adding Packages
+## 🔧 Prerequisites
 
-Edit `modules/nixos/packages.nix` to add system packages.
+**Hardware:**
+- Raspberry Pi 4 Model B
+- MicroSD card (32GB+, we use Samsung 128GB)
+- Ethernet cable
+- Power supply
+- Monitor + keyboard (needed once for initial setup)
 
-### Adding Services
+**Software:**
+- Nix or NixOS on your development machine
+- [just](https://github.com/casey/just) task runner (optional but recommended)
+- Git for version control
 
-Edit `modules/nixos/services.nix` to configure system services.
+---
 
-### Hardware-Specific Configuration
+## 📚 Documentation
 
-Add custom hardware modules in `modules/hardware/` for:
-- GPIO access
-- Serial/USB device configuration
-- CNC-specific interfaces (SPI, I2C, etc.)
+- **[FINAL-DEPLOYMENT.md](FINAL-DEPLOYMENT.md)** - 🌟 **START HERE** - Complete deployment guide from scratch
+- **[QUICKSTART-ETHERNET.md](QUICKSTART-ETHERNET.md)** - Quick reference for ethernet-only setup
+- **[NEXT-STEPS.md](NEXT-STEPS.md)** - What to do after flashing SD card
+- **[justfile](justfile)** - All available automation commands
 
-### CNC Software
+### Old Documentation
 
-Add CNC-related packages and services in their own module files, for example:
-- `modules/nixos/cnc/linuxcnc.nix`
-- `modules/nixos/cnc/grbl.nix`
+Archived documentation from earlier approaches is in `old-material/` - kept for reference but not recommended.
 
-## Troubleshooting
+---
 
-### Can't connect to Pi after installation
-- Check network cable connection
-- Verify DHCP is working on your network
-- Try accessing via IP address instead of hostname
-- Check your zero trust network approval status
+## 🔐 Security & Access
 
-### SSH connection refused
-- Ensure firewall port 22 is open
-- Verify SSH service is running: `systemctl status sshd`
+**Current setup:**
+- SSH enabled with password authentication
+- Firewall: Only port 22 (SSH) open
+- No root login via SSH
+- WiFi/Bluetooth disabled
 
-### Build failures
-- Update flake inputs: `nix flake update`
-- Clear nix cache if needed: `nix-collect-garbage -d`
-- Check nixos-raspberrypi binary cache is accessible
+**Recommended next steps:**
+1. Set up SSH keys: `ssh-copy-id vandal@cnc-pi.local`
+2. Disable password auth (edit `configuration.nix`)
+3. Keep system updated regularly
 
-## Binary Cache
+---
 
-This configuration uses the nixos-raspberrypi binary cache to speed up builds. The cache configuration is in `flake.nix`.
+## 🌐 Network Configuration
 
-## Resources
+**Current: Ethernet-only**
+```nix
+networking.useDHCP = lib.mkDefault true;
+networking.interfaces.eth0.useDHCP = lib.mkDefault true;
+networking.wireless.enable = false;
+hardware.bluetooth.enable = false;
+```
 
-- [nixos-raspberrypi repository](https://github.com/nvmd/nixos-raspberrypi)
-- [NixOS Manual](https://nixos.org/manual/nixos/stable/)
-- [nixos-anywhere](https://github.com/nix-community/nixos-anywhere)
+**To enable WiFi later:** Uncomment the WiFi section in `hosts/cnc-pi/configuration.nix` (around line 40).
 
-## State Version
+---
 
-**IMPORTANT**: Do not change `system.stateVersion` after initial installation. It's set to `25.05` in `hosts/cnc-pi/configuration.nix`.
+## 🐛 Troubleshooting
+
+### Can't SSH into Pi
+```bash
+# Check if Pi is on network
+ping cnc-pi.local
+
+# Or find Pi's IP
+sudo nmap -sn <your-subnet>
+
+# Try IP address instead of hostname
+ssh vandal@<pi-ip-address>
+```
+
+### Configuration errors
+```bash
+# Always check before deploying
+just check
+
+# This validates your config without deploying
+```
+
+### Want to start over
+Just re-flash the SD card and deploy again! That's the beauty of declarative configs.
+
+See [FINAL-DEPLOYMENT.md](FINAL-DEPLOYMENT.md) for detailed troubleshooting.
+
+---
+
+## 🚢 Deployment Architecture
+
+**The nvmd Approach (What We Use):**
+
+1. **Pre-built installer** - Download from nvmd cache (no building!)
+2. **Flash to SD card** - Boot Pi with this installer
+3. **Deploy your config** - Push your custom NixOS configuration
+4. **Reboot** - Pi runs your configuration forever after
+
+**Benefits:**
+- No cross-compilation needed
+- No building on your machine
+- Fast and reliable
+- Well-tested by nvmd community
+
+**Alternative approaches** (disko, custom images, etc.) are archived in `old-material/`.
+
+---
+
+## 📦 What's Installed
+
+**Base system:**
+- NixOS 25.11 (unstable)
+- Raspberry Pi 4 kernel and firmware
+- SSH server
+- Avahi/mDNS for `.local` hostname resolution
+- Tailscale (enabled but not configured)
+
+**Utilities:**
+- vim, git, htop, curl, wget, tmux
+
+**To add more:** Edit `modules/nixos/packages.nix`
+
+---
+
+## 🎯 Project Goals
+
+This Pi is intended for:
+- **CNC machine control** (LinuxCNC, GRBL, etc.)
+- **PLC communication** via Ethernet
+- **Serial/USB device interfacing** (user in `dialout` group)
+- **Reliable, declarative system** that can be rebuilt anytime
+
+---
+
+## 🙏 Credits
+
+- **[nvmd/nixos-raspberrypi](https://github.com/nvmd/nixos-raspberrypi)** - Excellent Pi support for NixOS
+- **[NixOS](https://nixos.org/)** - The best Linux distribution
+- **[just](https://github.com/casey/just)** - Task automation made easy
+
+---
+
+## 📝 State Version
+
+**IMPORTANT**: The `system.stateVersion` is set to `25.05`. Do not change this after initial deployment! It ensures system compatibility across updates.
+
+---
+
+## 🤝 Contributing
+
+This is a personal configuration, but feel free to:
+- Use it as a template for your own Pi projects
+- Submit issues if you find problems
+- Share improvements via pull requests
+
+---
+
+## 📄 License
+
+This configuration is provided as-is for educational and personal use.
+
+---
+
+## 🔗 Quick Links
+
+- [Flake definition](flake.nix)
+- [Main configuration](hosts/cnc-pi/configuration.nix)
+- [Package list](modules/nixos/packages.nix)
+- [Task commands](justfile)
+- [Complete deployment guide](FINAL-DEPLOYMENT.md)
+
+---
+
+**Last Updated:** Feb 25, 2026  
+**Status:** ✅ Deployed and operational  
+**Hostname:** cnc-pi.local  
+**NixOS Version:** 25.11.20260223.2597cb7
