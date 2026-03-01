@@ -20,8 +20,7 @@
 
   scripts = {
     run-slave.exec = ''
-      cd modbus_files
-      python slave.py
+      python src/slave.py
     '';
   };
 
