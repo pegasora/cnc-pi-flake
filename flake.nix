@@ -11,6 +11,12 @@
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    # Neovim configuration
+    nvf-flake = {
+      url = "path:/home/pegasora/Projects/flakes/nvf-flake";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   # Binary cache for nixos-raspberrypi
@@ -29,6 +35,7 @@
       nixpkgs,
       nixos-raspberrypi,
       home-manager,
+      nvf-flake,
       ...
     }@inputs:
     let

@@ -2,12 +2,14 @@
   config,
   pkgs,
   lib,
+  inputs,
   ...
-}: {
+}:
+{
   # System-wide packages for CNC Pi
   environment.systemPackages = with pkgs; [
     # Essential tools
-    neovim
+    inputs.nvf-flake.packages.${pkgs.system}.default
     git
     htop
     btop
