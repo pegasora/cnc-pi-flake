@@ -288,14 +288,17 @@
         "nvf": "nvf"
       },
       "locked": {
-        "lastModified": 1771877800,
-        "narHash": "sha256-A4qWBjNiqepU7o6zuA7DZvMvC+omr1HED1H/HkGlZ+s=",
-        "path": "/home/pegasora/Projects/flakes/nvf-flake",
-        "type": "path"
+        "lastModified": 1771877842,
+        "narHash": "sha256-Aby13enPzN0MBUmCN48UbXXcFtij7wSAb0VzcUTvEwA=",
+        "owner": "pegasora",
+        "repo": "nvf-flake",
+        "rev": "f01f9e3a75db2b7cb370eee8ad4341b031fc399f",
+        "type": "github"
       },
       "original": {
-        "path": "/home/pegasora/Projects/flakes/nvf-flake",
-        "type": "path"
+        "owner": "pegasora",
+        "repo": "nvf-flake",
+        "type": "github"
       }
     },
     "root": {
