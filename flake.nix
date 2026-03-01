@@ -14,7 +14,7 @@
 
     # Neovim configuration
     nvf-flake = {
-      url = "path:/home/pegasora/Projects/flakes/nvf-flake";
+      url = "github:pegasora/nvf-flake";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
