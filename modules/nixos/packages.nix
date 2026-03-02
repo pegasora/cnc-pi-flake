@@ -4,8 +4,7 @@
   lib,
   inputs,
   ...
-}:
-{
+}: {
   # System-wide packages for CNC Pi
   environment.systemPackages = with pkgs; [
     # Essential tools
@@ -26,6 +25,7 @@
     fastfetch
     just
     devenv
+    yazi
 
     # Network tools
     tcpdump
@@ -36,6 +36,15 @@
     gcc
     gnumake
     python3
+    cmake
+    go
+    zoxide
+    ripgrep
+    gnumake
+    ruff
+    lua-language-server
+    fixfmt
+    nixd
 
     # File management
     tree
