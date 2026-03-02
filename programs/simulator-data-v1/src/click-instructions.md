@@ -2,7 +2,7 @@
 
 ## Overview
 
-The CLICK PLC controls the CNC simulation cycle by sending start/stop signals to the Raspberry Pi via Modbus TCP. The robot performs machine tending, then signals the CLICK PLC to start a simulated machining cycle.
+The CLICK PLC controls the CNC simulation cycle by sending start/stop signals to the Raspberry Pi via Modbus TCP. The robot performs machine tending, then signals the CLICK PLC to start a simulated machining cycle. The CLICK PLC controls the cycle duration (typically 30 seconds) and sends a stop signal when complete.
 
 ## Network Configuration
 

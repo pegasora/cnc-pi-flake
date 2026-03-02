@@ -4,7 +4,8 @@
   config,
   inputs,
   ...
-}: {
+}:
+{
   env.GREET = "devenv";
 
   # https://devenv.sh/packages/
@@ -20,7 +21,13 @@
 
   scripts = {
     run-slave.exec = ''
-      python src/slave.py
+      sudo python src/slave.py
+    '';
+    run-master.exec = ''
+      python src/master.py "$@"
+    '';
+    test-cycle.exec = ''
+      python src/master.py --test-cycle "$@"
     '';
   };
 
@@ -32,7 +39,9 @@
     echo "Python: $(python --version)"
     echo ""
     echo "Available commands:"
-    echo "  run-slave  - Run Modbus slave (server) on port 502"
+    echo "  run-slave    - Run Modbus slave (server) on port 502"
+    echo "  run-master   - Run test master client"
+    echo "  test-cycle   - Test start/stop cycle (simulate CLICK PLC)"
     echo ""
     echo "======================================"
   '';
