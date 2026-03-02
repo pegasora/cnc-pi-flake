@@ -3,15 +3,15 @@
 Haas CNC Machine Simulator - Modbus TCP Slave (Pi)
 
 Workflow:
-1. CLICK PLC flips coil (address 0) to start simulation
-2. Pi simulates CNC machining parameters (runs until stop signal)
-3. CLICK PLC flips coil (address 1) to stop simulation (CLICK controls cycle time)
-4. Students read simulated parameters via Modbus TCP
+1. CLICK PLC sets coil 0 HIGH to start simulation
+2. Pi simulates CNC machining parameters
+3. CLICK PLC sets coil 0 LOW when cycle is done (e.g., after 30s timer)
+4. Pi stops simulation and waits for next HIGH signal
+5. Students read simulated parameters via Modbus TCP
 
 Modbus Address Map:
-- Coils (Read/Write from CLICK):
-  - 0: Start signal (CLICK -> Pi)
-  - 1: Stop signal (CLICK -> Pi)
+- Coils (Control):
+  - 0: Start/Stop signal (CLICK -> Pi) - HIGH=run, LOW=stop
   - 10: Signal received flag (Pi -> CLICK/Students)
   - 11: Simulation active flag (Pi -> Students)
   - 12: Cycle complete flag (Pi -> Students)
@@ -165,16 +165,16 @@ class CNCSimulator:
         while self.running:
             elapsed = time.time() - self.start_time
             
-            # Check for stop signal from CLICK
-            stop_signal = self.read_coil(1)
+            # Check if start signal went LOW (CLICK controls cycle by toggling start)
+            start_signal = self.read_coil(0)
             
             # Debug: Print coil status periodically
             if int(elapsed * 2) % 10 == 0:  # Every 5 seconds (at 2Hz rate)
-                start_coil = self.read_coil(0)
-                print(f"[DEBUG] Coils - Start(0)={start_coil}, Stop(1)={stop_signal}")
+                print(f"[DEBUG] Start signal: {start_signal}")
             
-            if stop_signal:
-                print(f"Stop signal received! Cycle complete (elapsed: {elapsed:.1f}s)")
+            # If start signal goes LOW, stop the simulation
+            if not start_signal:
+                print(f"Start signal went LOW! Cycle complete (elapsed: {elapsed:.1f}s)")
                 self.running = False
                 break
             
@@ -278,18 +278,14 @@ async def monitor_start_signal(simulator):
             # Start machining simulation
             await simulator.simulate_machining_cycle()
             
-            # After cycle completes, reset stop signal flag and wait for start to reset
-            print("\nCycle complete. Resetting stop signal and waiting for start signal to reset...")
+            # After cycle completes, wait for start to reset (go LOW then HIGH again)
+            print("\nCycle complete. Waiting for start signal to reset...")
             
-            # Clear the stop signal (coil 1) on the Pi side
-            simulator.write_coil(1, 0)
-            
-            # Wait for start signal to go low before accepting new cycles
+            # Wait for start signal to go LOW
             while simulator.read_coil(0):
-                print(f"[DEBUG] Still waiting - Start(0)={simulator.read_coil(0)}, Stop(1)={simulator.read_coil(1)}")
-                await asyncio.sleep(1)
+                await asyncio.sleep(0.1)
             
-            print("Start signal reset. Ready for next cycle.\n")
+            print("Start signal went LOW. Ready for next cycle.\n")
             last_start_state = 0  # Reset edge detector
             
         last_start_state = start_signal
@@ -337,9 +333,8 @@ async def run_server():
     print(f"Listening on: 0.0.0.0:502")
     print(f"Device: {identity.ProductName} ({identity.ModelName})")
     print("-" * 60)
-    print("Waiting for CLICK PLC signals...")
-    print("  Start: Coil 0 (CLICK -> Pi)")
-    print("  Stop:  Coil 1 (CLICK -> Pi)")
+    print("Waiting for CLICK PLC signal...")
+    print("  Coil 0: HIGH=start simulation, LOW=stop simulation")
     print("=" * 60)
     
     server = ModbusTcpServer(
