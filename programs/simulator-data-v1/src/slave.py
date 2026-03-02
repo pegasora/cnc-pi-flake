@@ -278,17 +278,10 @@ async def monitor_start_signal(simulator):
             # Start machining simulation
             await simulator.simulate_machining_cycle()
             
-            # After cycle completes, reset stop signal flag and wait for start to reset
-            print("\nCycle complete. Resetting stop signal and waiting for start signal to reset...")
-            
-            # Clear the stop signal (coil 1) on the Pi side
-            simulator.write_coil(1, 0)
-            
-            # Wait for start signal to go low before accepting new cycles
+            # After cycle completes, wait for start signal to go low before accepting new cycles
+            print("\nWaiting for start signal to reset before next cycle...")
             while simulator.read_coil(0):
-                print(f"[DEBUG] Still waiting - Start(0)={simulator.read_coil(0)}, Stop(1)={simulator.read_coil(1)}")
-                await asyncio.sleep(1)
-            
+                await asyncio.sleep(0.1)
             print("Start signal reset. Ready for next cycle.\n")
             last_start_state = 0  # Reset edge detector
             
