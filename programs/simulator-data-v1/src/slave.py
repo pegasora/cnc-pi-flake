@@ -167,6 +167,12 @@ class CNCSimulator:
             
             # Check for stop signal from CLICK
             stop_signal = self.read_coil(1)
+            
+            # Debug: Print coil status periodically
+            if int(elapsed * 2) % 10 == 0:  # Every 5 seconds (at 2Hz rate)
+                start_coil = self.read_coil(0)
+                print(f"[DEBUG] Coils - Start(0)={start_coil}, Stop(1)={stop_signal}")
+            
             if stop_signal:
                 print(f"Stop signal received! Cycle complete (elapsed: {elapsed:.1f}s)")
                 self.running = False
@@ -268,9 +274,6 @@ async def monitor_start_signal(simulator):
             
             # Set signal received flag
             simulator.write_coil(10, 1)
-            
-            # Reset start coil (acknowledge)
-            simulator.write_coil(0, 0)
             
             # Start machining simulation
             await simulator.simulate_machining_cycle()
