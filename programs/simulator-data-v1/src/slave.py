@@ -4,8 +4,8 @@ Haas CNC Machine Simulator - Modbus TCP Slave (Pi)
 
 Workflow:
 1. CLICK PLC flips coil (address 0) to start simulation
-2. Pi simulates CNC machining parameters for 30 seconds
-3. CLICK PLC flips coil (address 1) to stop simulation
+2. Pi simulates CNC machining parameters (runs until stop signal)
+3. CLICK PLC flips coil (address 1) to stop simulation (CLICK controls cycle time)
 4. Students read simulated parameters via Modbus TCP
 
 Modbus Address Map:
@@ -35,7 +35,7 @@ Modbus Address Map:
   - 15: Alarm code (0 = no alarm)
   - 16: Tool life remaining (%)
   - 17: Cycle time elapsed (seconds)
-  - 18: Cycle time remaining (seconds)
+  - 18: Cycle time remaining (seconds) - always 0, CLICK controls duration
   - 19: Power consumption (watts)
 """
 
@@ -45,7 +45,7 @@ import random
 from pymodbus.server import ModbusTcpServer
 from pymodbus.datastore import (
     ModbusSequentialDataBlock,
-    ModbusSlaveContext,
+    ModbusDeviceContext,
     ModbusServerContext,
 )
 from pymodbus.pdu.device import ModbusDeviceIdentification
@@ -96,19 +96,19 @@ class CNCSimulator:
         
     def read_coil(self, address):
         """Read coil value"""
-        slave = self.context[self.slave_id]
-        values = slave.getValues(1, address, count=1)  # FC=1 for coils
+        device = self.context[self.slave_id]
+        values = device.getValues(1, address, count=1)  # FC=1 for coils
         return values[0] if values else 0
     
     def write_coil(self, address, value):
         """Write coil value"""
-        slave = self.context[self.slave_id]
-        slave.setValues(1, address, [value])
+        device = self.context[self.slave_id]
+        device.setValues(1, address, [1 if value else 0])
     
     def write_registers(self, start_address, values):
         """Write holding registers"""
-        slave = self.context[self.slave_id]
-        slave.setValues(3, start_address, values)  # FC=3 for holding registers
+        device = self.context[self.slave_id]
+        device.setValues(3, start_address, values)  # FC=3 for holding registers
     
     def select_random_profile(self):
         """Select one of 4 machining profiles"""
@@ -143,10 +143,9 @@ class CNCSimulator:
         return x_pos, y_pos, z_pos
     
     async def simulate_machining_cycle(self):
-        """Simulate 30 second machining cycle with realistic parameters"""
+        """Simulate machining cycle with realistic parameters (runs until CLICK sends stop)"""
         self.running = True
         self.start_time = time.time()
-        cycle_duration = 30  # seconds
         
         # Select random profile
         profile_name = self.select_random_profile()
@@ -155,20 +154,21 @@ class CNCSimulator:
         self.write_coil(11, 1)
         self.write_coil(12, 0)  # Clear cycle complete
         
-        print(f"Starting machining simulation (Profile: {profile_name}, Duration: {cycle_duration}s)")
+        print(f"Starting machining simulation (Profile: {profile_name})")
+        print("Waiting for CLICK PLC stop signal (coil 1)...")
         
         # Select random tool
         self.current_tool = random.randint(1, 24)
         program_num = random.randint(1000, 9999)
+        elapsed = 0  # Initialize elapsed time
         
         while self.running:
             elapsed = time.time() - self.start_time
-            remaining = max(0, cycle_duration - elapsed)
             
             # Check for stop signal from CLICK
             stop_signal = self.read_coil(1)
-            if stop_signal or elapsed >= cycle_duration:
-                print(f"Cycle complete (elapsed: {elapsed:.1f}s)")
+            if stop_signal:
+                print(f"Stop signal received! Cycle complete (elapsed: {elapsed:.1f}s)")
                 self.running = False
                 break
             
@@ -219,7 +219,7 @@ class CNCSimulator:
                 alarm_code,              # 15: Alarm code
                 tool_life,               # 16: Tool life %
                 int(elapsed),            # 17: Elapsed time
-                int(remaining),          # 18: Remaining time
+                0,                       # 18: Remaining time (controlled by CLICK)
                 power,                   # 19: Power consumption
             ]
             
@@ -289,16 +289,16 @@ async def run_server():
     # Holding Registers: 100 registers (CNC parameters)
     holding_registers = ModbusSequentialDataBlock(0, [0] * 100)
     
-    # Create slave context
-    slave_context = ModbusSlaveContext(
+    # Create device context (pymodbus 3.x uses ModbusDeviceContext)
+    device = ModbusDeviceContext(
         di=coils,  # Discrete inputs (not used, share with coils)
         co=coils,  # Coils (read/write)
         hr=holding_registers,  # Holding registers
         ir=holding_registers,  # Input registers (share with holding)
     )
     
-    # Server context
-    context = ModbusServerContext(slaves=slave_context, single=True)
+    # Server context - pass device directly with single=True
+    context = ModbusServerContext(devices=device, single=True)
     
     # Device identification
     identity = ModbusDeviceIdentification()
