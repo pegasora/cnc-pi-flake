@@ -43,7 +43,7 @@
     gnumake
     ruff
     lua-language-server
-    fixfmt
+    nixfmt
     nixd
 
     # File management
