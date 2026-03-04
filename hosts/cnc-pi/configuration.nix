@@ -4,8 +4,7 @@
   lib,
   inputs,
   ...
-}:
-{
+}: {
   imports = [
     ./hardware-configuration.nix
   ];
@@ -86,7 +85,7 @@
     LC_TIME = "en_US.UTF-8";
   };
   # groups
-  users.groups.vandal = { };
+  users.groups.vandal = {};
 
   # Users
   users.users.vandal = {
@@ -117,7 +116,7 @@
   # Firewall - allow SSH only (zero trust network will handle approval)
   networking.firewall = {
     enable = true;
-    allowedTCPPorts = [ 22 ]; # SSH
+    allowedTCPPorts = [22]; # SSH
   };
 
   # Basic system packages

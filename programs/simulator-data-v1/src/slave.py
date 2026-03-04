@@ -51,7 +51,7 @@ from pymodbus.datastore import (
 from pymodbus.pdu.device import ModbusDeviceIdentification
 
 
-# 4 Preset machining profiles with randomness
+# 4 machining "profiles" with some randomness
 MACHINING_PROFILES = {
     "light_aluminum": {
         "rpm_range": (8000, 12000),
@@ -93,215 +93,246 @@ class CNCSimulator:
         self.current_profile = None
         self.parts_count = 0
         self.current_tool = 1
-        
+        self.debug = False
+
     def read_coil(self, address):
-        """Read coil value"""
+        """read coil value"""
         device = self.context[self.slave_id]
-        values = device.getValues(1, address, count=1)  # FC=1 for coils
+        values = device.getValues(1, address, count=1)  # FC=1 for co
         return values[0] if values else 0
-    
+
     def write_coil(self, address, value):
-        """Write coil value"""
+        """write coil value"""
         device = self.context[self.slave_id]
         device.setValues(1, address, [1 if value else 0])
-    
+
     def write_registers(self, start_address, values):
-        """Write holding registers"""
+        """write holding registers"""
         device = self.context[self.slave_id]
-        device.setValues(3, start_address, values)  # FC=3 for holding registers
-    
+        device.setValues(3, start_address, values)  # FC=3 for hr
+
     def select_random_profile(self):
-        """Select one of 4 machining profiles"""
+        """select one of 4 profiles"""
         profile_name = random.choice(list(MACHINING_PROFILES.keys()))
         self.current_profile = MACHINING_PROFILES[profile_name]
         print(f"Selected profile: {profile_name}")
         return profile_name
-    
+
     def generate_random_value(self, value_range, noise_pct=10):
-        """Generate random value within range with noise"""
+        """generate random value within range with noise"""
         base = random.randint(value_range[0], value_range[1])
         noise = random.randint(-noise_pct, noise_pct) / 100.0
         return int(base * (1 + noise))
-    
+
     def generate_toolpath_position(self, elapsed_time):
-        """Generate realistic X/Y/Z positions based on elapsed time"""
-        # Simulate circular toolpath in XY plane with Z depth
-        angle = (elapsed_time / 30.0) * 2 * 3.14159  # Full circle in 30s
-        
-        # X position: -50mm to +50mm (convert to microns)
-        x_pos = int(50000 * random.uniform(0.8, 1.0) * (1 + 0.5 * random.random() - 0.25))
-        
-        # Y position: -50mm to +50mm (convert to microns)
-        y_pos = int(50000 * random.uniform(0.8, 1.0) * (1 + 0.5 * random.random() - 0.25))
-        
-        # Z position: gradual descent, then retract at end
+        """generate X/Y/Z positions based on elapsed time"""
+        # sim toolpath in XY plane with Z depth
+        angle = (elapsed_time / 30.0) * 2 * 3.14159  # full circle in 30s
+
+        # X pos: -50mm to +50mm
+        x_pos = int(
+            50000 * random.uniform(0.8, 1.0) * (1 + 0.5 * random.random() - 0.25)
+        )
+
+        # Y pos: -50mm to +50mm
+        y_pos = int(
+            50000 * random.uniform(0.8, 1.0) * (1 + 0.5 * random.random() - 0.25)
+        )
+
+        # Z pos: gradual descent, then retract at end
         if elapsed_time < 25:
             z_pos = int(-5000 * (elapsed_time / 25.0) + random.randint(-500, 500))
         else:
-            z_pos = int(-5000 + (elapsed_time - 25) * 1000)  # Retract
-        
+            z_pos = int(-5000 + (elapsed_time - 25) * 1000)  # "restract"
+
         return x_pos, y_pos, z_pos
-    
+
     async def simulate_machining_cycle(self):
-        """Simulate machining cycle with realistic parameters (runs until CLICK sends stop)"""
+        """simulate machining cycle with realistic parameters (runs until CLICK start cycle signal is LOW)"""
         self.running = True
         self.start_time = time.time()
-        
+
         # Select random profile
         profile_name = self.select_random_profile()
-        
+
         # Set simulation active flag
         self.write_coil(11, 1)
         self.write_coil(12, 0)  # Clear cycle complete
-        
+
         print(f"Starting machining simulation (Profile: {profile_name})")
-        print("Waiting for CLICK PLC stop signal (coil 1)...")
-        
-        # Select random tool
+        print("Waiting for CLICK PLC CycleStart signal to go LOW (coil 1)...")
+
+        # select random tool
         self.current_tool = random.randint(1, 24)
         program_num = random.randint(1000, 9999)
         elapsed = 0  # Initialize elapsed time
-        
+
         while self.running:
             elapsed = time.time() - self.start_time
-            
-            # Check if start signal went LOW (CLICK controls cycle by toggling start)
+
+            # check if start signal went LOW (CLICK controls cycle by toggling start)
             start_signal = self.read_coil(0)
-            
-            # Debug: Print coil status periodically
-            if int(elapsed * 2) % 10 == 0:  # Every 5 seconds (at 2Hz rate)
-                print(f"[DEBUG] Start signal: {start_signal}")
-            
+
+            # debug: Print coil status periodically
+            if self.debug == True:
+                if int(elapsed * 2) % 10 == 0:  # Every 5 seconds (at 2Hz rate)
+                    print(f"[DEBUG] Start signal: {start_signal}")
+
             # If start signal goes LOW, stop the simulation
             if not start_signal:
-                print(f"Start signal went LOW! Cycle complete (elapsed: {elapsed:.1f}s)")
+                print(
+                    f"Start signal went LOW! Cycle complete (elapsed: {elapsed:.1f}s)"
+                )
                 self.running = False
                 break
-            
+
             # Generate realistic machining parameters with noise
-            rpm = self.generate_random_value(self.current_profile["rpm_range"], noise_pct=5)
-            feedrate = self.generate_random_value(self.current_profile["feedrate_range"], noise_pct=8)
-            spindle_load = self.generate_random_value(self.current_profile["spindle_load_range"], noise_pct=12)
-            coolant_flow = self.generate_random_value(self.current_profile["coolant_flow_range"], noise_pct=7)
-            power = self.generate_random_value(self.current_profile["power_range"], noise_pct=10)
-            
-            # Environmental parameters with gradual changes
+            rpm = self.generate_random_value(
+                self.current_profile["rpm_range"], noise_pct=5
+            )
+            feedrate = self.generate_random_value(
+                self.current_profile["feedrate_range"], noise_pct=8
+            )
+            spindle_load = self.generate_random_value(
+                self.current_profile["spindle_load_range"], noise_pct=12
+            )
+            coolant_flow = self.generate_random_value(
+                self.current_profile["coolant_flow_range"], noise_pct=7
+            )
+            power = self.generate_random_value(
+                self.current_profile["power_range"], noise_pct=10
+            )
+
+            # environmental parameters with gradual changes
             coolant_temp = 68 + int(elapsed * 0.5) + random.randint(-2, 2)
             spindle_temp = 72 + int(elapsed * 1.2) + random.randint(-3, 3)
             hydraulic_pressure = random.randint(950, 1050)
-            
+
             # Tool parameters
             tool_life = max(0, 100 - int(elapsed * 2.5))
             block_num = int(elapsed * 10) + random.randint(0, 5)
-            
+
             # Generate toolpath positions
             x_pos, y_pos, z_pos = self.generate_toolpath_position(elapsed)
-            
+
             # Alarm simulation (5% chance of warning alarm)
             alarm_code = 0
             if random.random() < 0.05:
                 alarm_code = random.choice([101, 102, 103])  # Warning codes
-            
+
             # Machine state (1 = Running)
             machine_state = 1
-            
+
             # Write all parameters to holding registers
             registers = [
-                machine_state,           # 0: State
-                self.parts_count,        # 1: Parts count
-                rpm,                     # 2: Spindle RPM
-                self.current_tool,       # 3: Tool number
-                feedrate,                # 4: Feedrate
-                spindle_load,            # 5: Spindle load %
-                x_pos & 0xFFFF,          # 6: X position (lower 16 bits, signed)
-                y_pos & 0xFFFF,          # 7: Y position
-                z_pos & 0xFFFF,          # 8: Z position
-                coolant_flow,            # 9: Coolant flow
-                coolant_temp,            # 10: Coolant temp
-                spindle_temp,            # 11: Spindle temp
-                hydraulic_pressure,      # 12: Hydraulic pressure
-                program_num,             # 13: Program number
-                block_num,               # 14: Block number
-                alarm_code,              # 15: Alarm code
-                tool_life,               # 16: Tool life %
-                int(elapsed),            # 17: Elapsed time
-                0,                       # 18: Remaining time (controlled by CLICK)
-                power,                   # 19: Power consumption
+                machine_state,  # 0: State
+                self.parts_count,  # 1: Parts count
+                rpm,  # 2: Spindle RPM
+                self.current_tool,  # 3: Tool number
+                feedrate,  # 4: Feedrate
+                spindle_load,  # 5: Spindle load %
+                x_pos & 0xFFFF,  # 6: X position (lower 16 bits, signed)
+                y_pos & 0xFFFF,  # 7: Y position
+                z_pos & 0xFFFF,  # 8: Z position
+                coolant_flow,  # 9: Coolant flow
+                coolant_temp,  # 10: Coolant temp
+                spindle_temp,  # 11: Spindle temp
+                hydraulic_pressure,  # 12: Hydraulic pressure
+                program_num,  # 13: Program number
+                block_num,  # 14: Block number
+                alarm_code,  # 15: Alarm code
+                tool_life,  # 16: Tool life %
+                int(elapsed),  # 17: Elapsed time
+                0,  # 18: Remaining time (controlled by CLICK)
+                power,  # 19: Power consumption
             ]
-            
+
             self.write_registers(0, registers)
-            
+
             # Print status every 5 seconds
             if int(elapsed) % 5 == 0 and elapsed > 0:
-                print(f"[{int(elapsed)}s] RPM={rpm}, Feed={feedrate/10:.1f} IPM, Load={spindle_load}%, "
-                      f"X={x_pos/1000:.2f}mm, Y={y_pos/1000:.2f}mm, Z={z_pos/1000:.2f}mm")
-            
+                print(
+                    f"[{int(elapsed)}s] RPM={rpm}, Feed={feedrate / 10:.1f} IPM, Load={spindle_load}%, "
+                    f"X={x_pos / 1000:.2f}mm, Y={y_pos / 1000:.2f}mm, Z={z_pos / 1000:.2f}mm"
+                )
+
             await asyncio.sleep(0.5)  # Update at 2Hz
-        
+
         # Cycle complete - set machine to idle
         self.parts_count += 1
         idle_registers = [
-            0,                    # State = Idle
-            self.parts_count,     # Increment parts count
-            0, 0, 0, 0, 0, 0, 0,  # Zero out motion parameters
-            68, 72, 1000,         # Environmental at rest
-            program_num, 0, 0,    # Program done
-            100,                  # Tool life reset
-            int(elapsed), 0,      # Cycle times
-            500,                  # Idle power
+            0,  # State = Idle
+            self.parts_count,  # Increment parts count
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,  # Zero out motion parameters
+            68,
+            72,
+            1000,  # Environmental at rest
+            program_num,
+            0,
+            0,  # Program done
+            100,  # Tool life reset
+            int(elapsed),
+            0,  # Cycle times
+            500,  # Idle power
         ]
         self.write_registers(0, idle_registers)
-        
+
         # Set cycle complete flag, clear simulation active
         self.write_coil(11, 0)
         self.write_coil(12, 1)
-        
+
         print(f"Parts completed: {self.parts_count}")
-        
+
 
 async def monitor_start_signal(simulator):
     """Monitor CLICK PLC start signal (coil 0)"""
     print("Monitoring for start signal from CLICK PLC (coil 0)...")
-    
+
     last_start_state = 0
-    
+
     while True:
         start_signal = simulator.read_coil(0)
-        
+
         # Detect rising edge (0 -> 1)
         if start_signal and not last_start_state and not simulator.running:
             print("\n=== START SIGNAL RECEIVED FROM CLICK PLC ===")
-            
+
             # Set signal received flag
             simulator.write_coil(10, 1)
-            
+
             # Start machining simulation
             await simulator.simulate_machining_cycle()
-            
+
             # After cycle completes, wait for start to reset (go LOW then HIGH again)
             print("\nCycle complete. Waiting for start signal to reset...")
-            
+
             # Wait for start signal to go LOW
             while simulator.read_coil(0):
                 await asyncio.sleep(0.1)
-            
+
             print("Start signal went LOW. Ready for next cycle.\n")
             last_start_state = 0  # Reset edge detector
-            
+
         last_start_state = start_signal
         await asyncio.sleep(0.1)
 
 
 async def run_server():
     """Main server function"""
-    
+
     # Initialize data blocks
     # Coils: 100 coils (start/stop signals, flags)
     coils = ModbusSequentialDataBlock(0, [0] * 100)
-    
+
     # Holding Registers: 100 registers (CNC parameters)
     holding_registers = ModbusSequentialDataBlock(0, [0] * 100)
-    
+
     # Create device context (pymodbus 3.x uses ModbusDeviceContext)
     device = ModbusDeviceContext(
         di=coils,  # Discrete inputs (not used, share with coils)
@@ -309,23 +340,23 @@ async def run_server():
         hr=holding_registers,  # Holding registers
         ir=holding_registers,  # Input registers (share with holding)
     )
-    
+
     # Server context - pass device directly with single=True
     context = ModbusServerContext(devices=device, single=True)
-    
+
     # Device identification
     identity = ModbusDeviceIdentification()
     identity.VendorName = "CIIR Robotics Lab"
     identity.ProductName = "Haas CNC Simulator"
     identity.ModelName = "VF-2SS-Simulator"
     identity.MajorMinorRevision = "1.0.0"
-    
+
     # Create simulator instance
     simulator = CNCSimulator(context)
-    
+
     # Start monitoring task
     monitor_task = asyncio.create_task(monitor_start_signal(simulator))
-    
+
     # Start Modbus server
     print("=" * 60)
     print("Haas CNC Machine Simulator - Modbus TCP Slave")
@@ -336,13 +367,13 @@ async def run_server():
     print("Waiting for CLICK PLC signal...")
     print("  Coil 0: HIGH=start simulation, LOW=stop simulation")
     print("=" * 60)
-    
+
     server = ModbusTcpServer(
         context=context,
         address=("0.0.0.0", 502),
         identity=identity,
     )
-    
+
     await server.serve_forever()
 
 
