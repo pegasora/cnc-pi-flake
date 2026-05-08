@@ -1,6 +1,6 @@
 # CNC Pi - NixOS Configuration for Raspberry Pi 4 B
 
-**Status: Deployed and Working** (March 25, 2026)
+**Status: Deployed and Working** (April, 2026)
 
 This repository contains a modular NixOS configuration for a Raspberry Pi 4 Model B, designed for CNC machine control. The Pi is currently running NixOS and accessible via SSH.
 
