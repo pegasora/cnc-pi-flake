@@ -1,6 +1,6 @@
 # CNC Pi - NixOS Configuration for Raspberry Pi 4 B
 
-✅ **Status: Deployed and Working** (Feb 25, 2026)
+**Status: Deployed and Working** (March 25, 2026)
 
 This repository contains a modular NixOS configuration for a Raspberry Pi 4 Model B, designed for CNC machine control. The Pi is currently running NixOS and accessible via SSH.
 
@@ -12,9 +12,7 @@ This repository contains a modular NixOS configuration for a Raspberry Pi 4 Mode
 - **User**: `vandal`
 - **Deployment Method**: nvmd pre-built installer (no building required!)
 
-## 🚀 Getting Started
-
-**First time deploying?** → Read **[FINAL-DEPLOYMENT.md](FINAL-DEPLOYMENT.md)** for complete step-by-step instructions.
+## Getting Started
 
 **Quick overview:**
 ```bash
@@ -33,11 +31,9 @@ just deploy-to-installer cnc-pi root@<pi-ip>
 ssh vandal@cnc-pi.local
 ```
 
-That's it! See [FINAL-DEPLOYMENT.md](FINAL-DEPLOYMENT.md) for detailed instructions with troubleshooting.
-
 ---
 
-## 📁 Repository Structure
+## Repository Structure
 
 ```
 .
@@ -62,7 +58,7 @@ That's it! See [FINAL-DEPLOYMENT.md](FINAL-DEPLOYMENT.md) for detailed instructi
 
 ---
 
-## ✨ Features
+## Features
 
 - **No Building Required**: Uses pre-built nvmd installer images
 - **Fully Declarative**: Everything configured in Nix
@@ -76,7 +72,7 @@ That's it! See [FINAL-DEPLOYMENT.md](FINAL-DEPLOYMENT.md) for detailed instructi
 
 ---
 
-## 🛠️ Common Tasks
+## Common Tasks
 
 ### Deploy Configuration Changes
 
@@ -142,7 +138,7 @@ just list
 
 ---
 
-## 🔧 Prerequisites
+## Prerequisites
 
 **Hardware:**
 - Raspberry Pi 4 Model B
@@ -158,20 +154,7 @@ just list
 
 ---
 
-## 📚 Documentation
-
-- **[FINAL-DEPLOYMENT.md](FINAL-DEPLOYMENT.md)** - 🌟 **START HERE** - Complete deployment guide from scratch
-- **[QUICKSTART-ETHERNET.md](QUICKSTART-ETHERNET.md)** - Quick reference for ethernet-only setup
-- **[NEXT-STEPS.md](NEXT-STEPS.md)** - What to do after flashing SD card
-- **[justfile](justfile)** - All available automation commands
-
-### Old Documentation
-
-Archived documentation from earlier approaches is in `old-material/` - kept for reference but not recommended.
-
----
-
-## 🔐 Security & Access
+## Security & Access
 
 **Current setup:**
 - SSH enabled with password authentication
@@ -186,7 +169,7 @@ Archived documentation from earlier approaches is in `old-material/` - kept for 
 
 ---
 
-## 🌐 Network Configuration
+## Network Configuration
 
 **Current: Ethernet-only**
 ```nix
@@ -196,11 +179,9 @@ networking.wireless.enable = false;
 hardware.bluetooth.enable = false;
 ```
 
-**To enable WiFi later:** Uncomment the WiFi section in `hosts/cnc-pi/configuration.nix` (around line 40).
-
 ---
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### Can't SSH into Pi
 ```bash
@@ -225,11 +206,9 @@ just check
 ### Want to start over
 Just re-flash the SD card and deploy again! That's the beauty of declarative configs.
 
-See [FINAL-DEPLOYMENT.md](FINAL-DEPLOYMENT.md) for detailed troubleshooting.
-
 ---
 
-## 🚢 Deployment Architecture
+## Deployment Architecture
 
 **The nvmd Approach (What We Use):**
 
@@ -248,7 +227,7 @@ See [FINAL-DEPLOYMENT.md](FINAL-DEPLOYMENT.md) for detailed troubleshooting.
 
 ---
 
-## 📦 What's Installed
+## What's Installed
 
 **Base system:**
 - NixOS 25.11 (unstable)
@@ -264,7 +243,7 @@ See [FINAL-DEPLOYMENT.md](FINAL-DEPLOYMENT.md) for detailed troubleshooting.
 
 ---
 
-## 🎯 Project Goals
+## Project Goals
 
 This Pi is intended for:
 - **CNC machine control** (LinuxCNC, GRBL, etc.)
@@ -274,7 +253,7 @@ This Pi is intended for:
 
 ---
 
-## 🙏 Credits
+## Credits
 
 - **[nvmd/nixos-raspberrypi](https://github.com/nvmd/nixos-raspberrypi)** - Excellent Pi support for NixOS
 - **[NixOS](https://nixos.org/)** - The best Linux distribution
@@ -282,13 +261,13 @@ This Pi is intended for:
 
 ---
 
-## 📝 State Version
+## State Version
 
 **IMPORTANT**: The `system.stateVersion` is set to `25.05`. Do not change this after initial deployment! It ensures system compatibility across updates.
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 This is a personal configuration, but feel free to:
 - Use it as a template for your own Pi projects
@@ -297,13 +276,13 @@ This is a personal configuration, but feel free to:
 
 ---
 
-## 📄 License
+## License
 
 This configuration is provided as-is for educational and personal use.
 
 ---
 
-## 🔗 Quick Links
+## Quick Links
 
 - [Flake definition](flake.nix)
 - [Main configuration](hosts/cnc-pi/configuration.nix)
@@ -314,6 +293,6 @@ This configuration is provided as-is for educational and personal use.
 ---
 
 **Last Updated:** Feb 25, 2026  
-**Status:** ✅ Deployed and operational  
+**Status:** Deployed and operational  
 **Hostname:** cnc-pi.local  
 **NixOS Version:** 25.11.20260223.2597cb7
